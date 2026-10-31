@@ -1,17 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
-using Cthangover.Core.Mods;
-using Cthangover.Core.UI.Theming;
-using Cthangover.Core.Utils;
-using Cthangover.Mods.Interface.Theming;
-using Cthangover.Mods.Interface.Tool;
-using Cthangover.Tools.Common;
-using Godot;
-
 namespace Cthangover.Core.UI.Tool.CatalogExport
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text.Json;
+    using Cthangover.Core.Mods;
+    using Cthangover.Core.UI.Theming;
+    using Cthangover.Core.Utils;
+    using Cthangover.Mods.Interface.Theming;
+    using Cthangover.Mods.Interface.Tool;
+    using Cthangover.Tools.Common;
+    using Godot;
+
     /// <summary>
     /// Developer tool that builds a catalog entry (JSON for the online mod
     /// catalog) from a locally installed mod's manifest. Ported out of the old
@@ -26,6 +26,8 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
     /// </summary>
     public partial class CatalogExportWindow : ToolWindow
     {
+        private void OnDownloadUrlChanged(string text) => UpdatePreview();
+
         private static readonly string[] Statuses = { "stable", "beta", "deprecated", "archived" };
         private static readonly CategoryType[] Categories = Enum.GetValues<CategoryType>();
 
@@ -130,7 +132,9 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
             AddReadOnly("mods/author", _modInfo.Author ?? "—");
 
             _formHost.AddChild(ToolUi.Section("tools/catalog_export/metadata"));
-            _urlEdit = ToolUi.Field(_formHost, "mods/catalog_download_url", ToolUi.Text("https://…/" + modId + ".zip", _ => UpdatePreview()));
+            var archiveName = System.IO.File.Exists(_modInfo.FileProvider.RootPath)
+                ? System.IO.Path.GetFileName(_modInfo.FileProvider.RootPath) : modId + ".zip";
+            _urlEdit = ToolUi.Field(_formHost, "mods/catalog_download_url", ToolUi.Text("https://…/" + archiveName, OnDownloadUrlChanged));
             _statusOpt = ToolUi.Field(_formHost, "mods/catalog_status", new OptionButton());
             foreach (var status in Statuses)
                 _statusOpt.AddItem(status);
@@ -310,9 +314,9 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
             {
                 var entry = BuildExportEntry();
                 var modsRoot = ModRegistry.ModsPath;
-                var isZip = _modInfo.FileProvider.RootPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
-                var path = isZip
-                    ? ModCatalogExporter.ExportFromZip(_modInfo, entry, modsRoot)
+                var isArchive = System.IO.File.Exists(_modInfo.FileProvider.RootPath);
+                var path = isArchive
+                    ? ModCatalogExporter.ExportFromArchive(_modInfo, entry, modsRoot)
                     : ModCatalogExporter.ExportFromFolder(_modInfo, entry, modsRoot);
                 SetStatus(string.Format(ToolUi.Tr("tools/catalog_export/exported"), path), ToolStatusKind.Ok);
             }
