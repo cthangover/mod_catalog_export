@@ -313,7 +313,8 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
             try
             {
                 var entry = BuildExportEntry();
-                var modsRoot = ModRegistry.ModsPath;
+                // Keep exports beside their source mod, including private roots.
+                var modsRoot = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(_modInfo.FileProvider.RootPath));
                 var isArchive = System.IO.File.Exists(_modInfo.FileProvider.RootPath);
                 var path = isArchive
                     ? ModCatalogExporter.ExportFromArchive(_modInfo, entry, modsRoot)
