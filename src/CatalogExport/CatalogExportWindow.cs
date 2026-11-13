@@ -11,6 +11,7 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
     using Cthangover.Mods.Interface.Tool;
     using Cthangover.Tools.Common;
     using Godot;
+    using Cthangover.Mods.Interface.View;
 
     /// <summary>
     /// Developer tool that builds a catalog entry (JSON for the online mod
@@ -29,7 +30,6 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
         private void OnDownloadUrlChanged(string text) => UpdatePreview();
 
         private static readonly string[] Statuses = { "stable", "beta", "deprecated", "archived" };
-        private static readonly CategoryType[] Categories = Enum.GetValues<CategoryType>();
 
         private OptionButton _modSelect;
         private VBoxContainer _formHost;
@@ -38,7 +38,7 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
         private ModInfo _modInfo;
         private ModManifest _manifest;
         private LineEdit _urlEdit;
-        private readonly List<CheckBox> _categoryChecks = new();
+        private ModCategoryEditor _categories;
         private LineEdit _tagsEdit;
         private TextEdit _changelogEdit;
         private OptionButton _statusOpt;
@@ -118,7 +118,7 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
         {
             foreach (var child in _formHost.GetChildren())
                 child.QueueFree();
-            _categoryChecks.Clear();
+            _categories = null;
 
             _modInfo = ModRegistry.Instance.GetMod(modId) as ModInfo;
             _manifest = _modInfo?.Manifest;
@@ -144,17 +144,10 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
             _tagsEdit = ToolUi.Field(_formHost, "mods/catalog_tags", ToolUi.Text("story, ru", _ => UpdatePreview()));
 
             _formHost.AddChild(ToolUi.Section("mods/catalog_category"));
-            var grid = new GridContainer { Columns = 3 };
-            grid.AddThemeConstantOverride("h_separation", UiTokens.Space5);
-            var preselected = _manifest.Category ?? CategoryType.Other;
-            foreach (var category in Categories)
-            {
-                var check = new CheckBox { Text = GetCategoryDisplayName(category), ButtonPressed = (preselected & category) != 0 };
-                check.Toggled += _ => UpdatePreview();
-                _categoryChecks.Add(check);
-                grid.AddChild(check);
-            }
-            _formHost.AddChild(grid);
+            _categories = ModCategoryEditor.Create(_manifest.Categories);
+            _categories.Changed += UpdatePreview;
+            _formHost.AddChild(_categories);
+            _categories.SetEditable(ModCategoryManifestStore.CanEdit(_modInfo, ModCategoryEditor.ProjectRoot));
 
             _formHost.AddChild(ToolUi.Section("mods/catalog_changelog"));
             _changelogEdit = new TextEdit
@@ -182,25 +175,6 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
             label.AddThemeFontOverride("font", ToolUi.Mono());
             ToolUi.Field(_formHost, labelKey, label);
         }
-
-        private static string GetCategoryDisplayName(CategoryType cat) => cat switch
-        {
-            CategoryType.Story => ToolUi.Tr("mods/category_story"),
-            CategoryType.Characters => ToolUi.Tr("mods/category_characters"),
-            CategoryType.Gameplay => ToolUi.Tr("mods/category_gameplay"),
-            CategoryType.Visual => ToolUi.Tr("mods/category_visual"),
-            CategoryType.Audio => ToolUi.Tr("mods/category_audio"),
-            CategoryType.UI => ToolUi.Tr("mods/category_ui"),
-            CategoryType.Locale => ToolUi.Tr("mods/category_locale"),
-            CategoryType.Library => ToolUi.Tr("mods/category_library"),
-            CategoryType.Engine => ToolUi.Tr("mods/category_engine"),
-            CategoryType.Overhaul => ToolUi.Tr("mods/category_overhaul"),
-            CategoryType.Tools => ToolUi.Tr("mods/category_tools"),
-            CategoryType.Editor => ToolUi.Tr("mods/category_editor"),
-            CategoryType.Debug => ToolUi.Tr("mods/category_debug"),
-            CategoryType.Other => ToolUi.Tr("mods/category_other"),
-            _ => cat.ToString(),
-        };
 
         private void AddLocaleRow(string lang, string name, string description)
         {
@@ -284,7 +258,7 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
                     Changelog = NullIfEmpty(_changelogEdit.Text),
                 },
             };
-            entry.Category = CollectSelectedCategories();
+            entry.Categories = _categories.Categories;
             entry.Tags = ParseTags(_tagsEdit.Text);
             entry.Status = Statuses[Math.Max(0, _statusOpt.Selected)];
             entry.MinGameVersion = NullIfEmpty(_minGameVerEdit.Text);
@@ -301,8 +275,12 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
 
         private void OnExportPressed()
         {
-            if (_modInfo == null)
+            if (_modInfo == null) return;
+            if (_categories.HasPendingInput)
+            {
+                SetStatus(ToolUi.Tr("mod_categories/pending"), ToolStatusKind.Error);
                 return;
+            }
 
             if (string.IsNullOrWhiteSpace(_urlEdit.Text))
             {
@@ -312,6 +290,8 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
 
             try
             {
+                if (ModCategoryManifestStore.CanEdit(_modInfo, ModCategoryEditor.ProjectRoot))
+                    ModCategoryManifestStore.Save(_modInfo, ModCategoryEditor.ProjectRoot, _categories.Categories);
                 var entry = BuildExportEntry();
                 // Keep exports beside their source mod, including private roots.
                 var modsRoot = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(_modInfo.FileProvider.RootPath));
@@ -352,21 +332,11 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
                 Author = manifest.Author,
                 Version = manifest.Version,
                 Description = manifest.Description,
-                Category = manifest.Category ?? CategoryType.Other,
+                Categories = ModCategories.Normalize(manifest.Categories),
                 Depends = depends,
                 ConflictsWith = manifest.ConflictsWith,
             };
         }
 
-        private CategoryType CollectSelectedCategories()
-        {
-            var selected = (CategoryType)0;
-            for (var i = 0; i < Categories.Length && i < _categoryChecks.Count; i++)
-            {
-                if (_categoryChecks[i].ButtonPressed)
-                    selected |= Categories[i];
-            }
-            return selected != 0 ? selected : CategoryType.Other;
-        }
     }
 }

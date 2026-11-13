@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "author": "ct",
   "description": "Export mod catalog metadata and installable archives.",
-  "category": "tools, editor",
+  "categories": ["tools", "editor"],
   "sources": [
     "src/**/*.cs"
   ],

@@ -21,3 +21,15 @@ Upload the archive to the download URL and add the entry to your catalog; the mo
 
 `tools_base`, `ui_base`. It uses the game's catalog and archive code and does not need the mod manager window.
 The older `editor_tools` package installs this mod together with the other authoring windows.
+
+## Categories
+
+Every string is a category. Enter any name or choose a suggestion from installed mods, catalogs and the ready-translated base names.
+The client trims whitespace, ignores empty names and deduplicates using `OrdinalIgnoreCase`, preserving the first spelling and order.
+There is no client length/count limit. Choose the primary category; it is saved first and determines the card/group label.
+Filters show all categories present in the data, ordered alphabetically by displayed name, with `other` last; the list scrolls without collapsing.
+Translate a name with `mod_category/<name>` in the mod locale; untranslated names keep the first authored spelling.
+**Save categories** in a local detail edits development folders in `mods/` or `mods_private/` without publishing.
+Publication and folder export save before packaging; installed packages and archives are read-only.
+A JSON field that is not an array of strings is a manifest/record type error; a catalog skips only the erroneous record.
+Keyserver input limits are 32 strings, 64 Unicode characters per string, and no control characters.
