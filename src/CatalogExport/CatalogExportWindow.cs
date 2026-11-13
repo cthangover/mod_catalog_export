@@ -139,7 +139,7 @@ namespace Cthangover.Core.UI.Tool.CatalogExport
             foreach (var status in Statuses)
                 _statusOpt.AddItem(status);
             _statusOpt.ItemSelected += _ => UpdatePreview();
-            _minGameVerEdit = ToolUi.Field(_formHost, "mods/catalog_min_game_version", ToolUi.Text("1.0.0", _ => UpdatePreview()));
+            _minGameVerEdit = ToolUi.Field(_formHost, "mods/catalog_min_game_version", ToolUi.Text("0.1.0", _ => UpdatePreview()));
             _iconUrlEdit = ToolUi.Field(_formHost, "mods/catalog_icon_url", ToolUi.Text("https://…/icon.png", _ => UpdatePreview()));
             _tagsEdit = ToolUi.Field(_formHost, "mods/catalog_tags", ToolUi.Text("story, ru", _ => UpdatePreview()));
 

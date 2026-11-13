@@ -1,7 +1,7 @@
 {
   "id": "catalog_export",
   "name": "Catalog Export",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "author": "ct",
   "description": "Export mod catalog metadata and installable archives.",
   "category": "tools, editor",
@@ -9,7 +9,7 @@
     "src/**/*.cs"
   ],
   "depends": [
-    "tools_base>=1",
-    "ui_base>=1"
+    "tools_base>=0.1.0",
+    "ui_base>=0.1.0"
   ]
 }
